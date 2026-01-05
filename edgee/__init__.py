@@ -1,0 +1,157 @@
+"""Edgee Gateway SDK for Python"""
+
+import os
+import json
+from typing import Optional, Union
+from dataclasses import dataclass
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+
+
+@dataclass
+class FunctionDefinition:
+    name: str
+    description: Optional[str] = None
+    parameters: Optional[dict] = None
+
+
+@dataclass
+class Tool:
+    type: str  # "function"
+    function: FunctionDefinition
+
+
+@dataclass
+class ToolCall:
+    id: str
+    type: str
+    function: dict  # {"name": str, "arguments": str}
+
+
+@dataclass
+class Message:
+    role: str  # "system" | "user" | "assistant" | "tool"
+    content: Optional[str] = None
+    name: Optional[str] = None
+    tool_calls: Optional[list[ToolCall]] = None
+    tool_call_id: Optional[str] = None
+
+
+@dataclass
+class InputObject:
+    messages: list[dict]
+    tools: Optional[list[dict]] = None
+    tool_choice: Optional[Union[str, dict]] = None
+
+
+@dataclass
+class Choice:
+    index: int
+    message: dict
+    finish_reason: Optional[str]
+
+
+@dataclass
+class Usage:
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+
+@dataclass
+class SendResponse:
+    choices: list[Choice]
+    usage: Optional[Usage] = None
+
+
+@dataclass
+class EdgeeConfig:
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+
+
+class Edgee:
+    def __init__(
+        self,
+        config: Optional[Union[str, EdgeeConfig, dict]] = None,
+    ):
+        api_key: Optional[str] = None
+        base_url: Optional[str] = None
+
+        if isinstance(config, str):
+            # Backward compatibility: accept api_key as string
+            api_key = config
+        elif isinstance(config, EdgeeConfig):
+            api_key = config.api_key
+            base_url = config.base_url
+        elif isinstance(config, dict):
+            api_key = config.get("api_key")
+            base_url = config.get("base_url")
+
+        self.api_key = api_key or os.environ.get("EDGEE_API_KEY", "")
+        if not self.api_key:
+            raise ValueError("EDGEE_API_KEY is not set")
+
+        self.base_url = base_url or os.environ.get("EDGEE_BASE_URL", "https://api.edgee.ai")
+
+    def send(
+        self,
+        model: str,
+        input: Union[str, InputObject, dict],
+    ) -> SendResponse:
+        """Send a completion request to the Edgee AI Gateway."""
+
+        if isinstance(input, str):
+            messages = [{"role": "user", "content": input}]
+            tools = None
+            tool_choice = None
+        elif isinstance(input, InputObject):
+            messages = input.messages
+            tools = input.tools
+            tool_choice = input.tool_choice
+        else:
+            messages = input.get("messages", [])
+            tools = input.get("tools")
+            tool_choice = input.get("tool_choice")
+
+        body: dict = {"model": model, "messages": messages}
+        if tools:
+            body["tools"] = tools
+        if tool_choice:
+            body["tool_choice"] = tool_choice
+
+        request = Request(
+            f"{self.base_url}/v1/chat/completions",
+            data=json.dumps(body).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            },
+            method="POST",
+        )
+
+        try:
+            with urlopen(request) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except HTTPError as e:
+            error_body = e.read().decode("utf-8")
+            raise RuntimeError(f"API error {e.code}: {error_body}") from e
+
+        choices = [
+            Choice(
+                index=c["index"],
+                message=c["message"],
+                finish_reason=c.get("finish_reason"),
+            )
+            for c in data["choices"]
+        ]
+
+        usage = None
+        if "usage" in data:
+            usage = Usage(
+                prompt_tokens=data["usage"]["prompt_tokens"],
+                completion_tokens=data["usage"]["completion_tokens"],
+                total_tokens=data["usage"]["total_tokens"],
+            )
+
+        return SendResponse(choices=choices, usage=usage)
