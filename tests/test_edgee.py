@@ -2,11 +2,11 @@
 
 import json
 import os
-import pytest
-from unittest.mock import patch, MagicMock
-from io import BytesIO
+from unittest.mock import MagicMock, patch
 
-from edgee import Edgee, EdgeeConfig, SendResponse, Choice, Usage
+import pytest
+
+from edgee import Edgee, EdgeeConfig
 
 
 class TestEdgeeConstructor:
@@ -122,7 +122,7 @@ class TestEdgeeSend:
         mock_urlopen.return_value = self._mock_response(mock_response_data)
 
         client = Edgee("test-api-key")
-        result = client.send(
+        client.send(
             model="gpt-4",
             input={
                 "messages": [
@@ -306,4 +306,3 @@ class TestEdgeeSend:
 
         call_args = mock_urlopen.call_args[0][0]
         assert call_args.full_url == f"{config_base_url}/v1/chat/completions"
-

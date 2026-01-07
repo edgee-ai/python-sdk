@@ -1,18 +1,21 @@
 """Edgee Gateway SDK for Python"""
 
-import os
 import json
-from typing import Optional, Union
+import os
 from dataclasses import dataclass
-from urllib.request import Request, urlopen
 from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+
+# API Configuration
+DEFAULT_BASE_URL = "https://api.edgee.ai"
+API_ENDPOINT = "/v1/chat/completions"
 
 
 @dataclass
 class FunctionDefinition:
     name: str
-    description: Optional[str] = None
-    parameters: Optional[dict] = None
+    description: str | None = None
+    parameters: dict | None = None
 
 
 @dataclass
@@ -31,24 +34,24 @@ class ToolCall:
 @dataclass
 class Message:
     role: str  # "system" | "user" | "assistant" | "tool"
-    content: Optional[str] = None
-    name: Optional[str] = None
-    tool_calls: Optional[list[ToolCall]] = None
-    tool_call_id: Optional[str] = None
+    content: str | None = None
+    name: str | None = None
+    tool_calls: list[ToolCall] | None = None
+    tool_call_id: str | None = None
 
 
 @dataclass
 class InputObject:
     messages: list[dict]
-    tools: Optional[list[dict]] = None
-    tool_choice: Optional[Union[str, dict]] = None
+    tools: list[dict] | None = None
+    tool_choice: str | dict | None = None
 
 
 @dataclass
 class Choice:
     index: int
     message: dict
-    finish_reason: Optional[str]
+    finish_reason: str | None
 
 
 @dataclass
@@ -61,43 +64,44 @@ class Usage:
 @dataclass
 class SendResponse:
     choices: list[Choice]
-    usage: Optional[Usage] = None
+    usage: Usage | None = None
 
 
 @dataclass
 class EdgeeConfig:
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
+    api_key: str | None = None
+    base_url: str | None = None
 
 
 class Edgee:
     def __init__(
         self,
-        config: Optional[Union[str, EdgeeConfig, dict]] = None,
+        config: str | EdgeeConfig | dict | None = None,
     ):
-        api_key: Optional[str] = None
-        base_url: Optional[str] = None
-
         if isinstance(config, str):
             # Backward compatibility: accept api_key as string
             api_key = config
+            base_url = None
         elif isinstance(config, EdgeeConfig):
             api_key = config.api_key
             base_url = config.base_url
         elif isinstance(config, dict):
             api_key = config.get("api_key")
             base_url = config.get("base_url")
+        else:
+            api_key = None
+            base_url = None
 
         self.api_key = api_key or os.environ.get("EDGEE_API_KEY", "")
         if not self.api_key:
             raise ValueError("EDGEE_API_KEY is not set")
 
-        self.base_url = base_url or os.environ.get("EDGEE_BASE_URL", "https://api.edgee.ai")
+        self.base_url = base_url or os.environ.get("EDGEE_BASE_URL", DEFAULT_BASE_URL)
 
     def send(
         self,
         model: str,
-        input: Union[str, InputObject, dict],
+        input: str | InputObject | dict,
     ) -> SendResponse:
         """Send a completion request to the Edgee AI Gateway."""
 
@@ -121,7 +125,7 @@ class Edgee:
             body["tool_choice"] = tool_choice
 
         request = Request(
-            f"{self.base_url}/v1/chat/completions",
+            f"{self.base_url}{API_ENDPOINT}",
             data=json.dumps(body).encode("utf-8"),
             headers={
                 "Content-Type": "application/json",

@@ -61,4 +61,3 @@ response3 = edgee.send(
 )
 print(f"Content: {response3.choices[0].message.get('content')}")
 print(f"Tool calls: {response3.choices[0].message.get('tool_calls')}")
-
