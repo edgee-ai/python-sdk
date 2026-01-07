@@ -73,6 +73,22 @@ if response.choices[0].message.get("tool_calls"):
 
 ### Streaming
 
+You can enable streaming by setting `stream=True` in the `send()` method, or by using the convenience `stream()` method.
+
+#### Using send(stream=True)
+
+```python
+for chunk in edgee.send(
+    model="gpt-4o",
+    input="Tell me a story",
+    stream=True,
+):
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+#### Using stream() method
+
 ```python
 for chunk in edgee.stream(
     model="gpt-4o",
@@ -85,7 +101,7 @@ for chunk in edgee.stream(
 ### Streaming with Messages
 
 ```python
-for chunk in edgee.stream(
+for chunk in edgee.send(
     model="gpt-4o",
     input={
         "messages": [
@@ -93,6 +109,7 @@ for chunk in edgee.stream(
             {"role": "user", "content": "Hello!"},
         ],
     },
+    stream=True,
 ):
     delta = chunk.choices[0].delta
     if delta.content:

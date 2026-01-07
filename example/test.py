@@ -63,11 +63,12 @@ print()
 #print(f"Tool calls: {response3.choices[0].message.get('tool_calls')}")
 #print()
 
-# Test 4: Streaming
-print("Test 4: Streaming")
-for chunk in edgee.stream(
+# Test 4: Streaming with send(stream=True)
+print("Test 4: Streaming with send(stream=True)")
+for chunk in edgee.send(
     model="mistral/mistral-small-latest",
     input="Tell me a short story about a robot",
+    stream=True,
 ):
     if chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="", flush=True)

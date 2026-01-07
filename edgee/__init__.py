@@ -121,8 +121,19 @@ class Edgee:
         self,
         model: str,
         input: str | InputObject | dict,
-    ) -> SendResponse:
-        """Send a completion request to the Edgee AI Gateway."""
+        stream: bool = False,
+    ):
+        """Send a completion request to the Edgee AI Gateway.
+
+        Args:
+            model: The model to use for completion
+            input: The input (string, dict, or InputObject)
+            stream: If True, returns a generator yielding StreamChunk objects.
+                   If False, returns a SendResponse object.
+
+        Returns:
+            SendResponse if stream=False, or a generator yielding StreamChunk objects if stream=True.
+        """
 
         if isinstance(input, str):
             messages = [{"role": "user", "content": input}]
@@ -138,6 +149,8 @@ class Edgee:
             tool_choice = input.get("tool_choice")
 
         body: dict = {"model": model, "messages": messages}
+        if stream:
+            body["stream"] = True
         if tools:
             body["tools"] = tools
         if tool_choice:
@@ -153,6 +166,13 @@ class Edgee:
             method="POST",
         )
 
+        if stream:
+            return self._handle_streaming_response(request)
+        else:
+            return self._handle_non_streaming_response(request)
+
+    def _handle_non_streaming_response(self, request: Request) -> SendResponse:
+        """Handle non-streaming response."""
         try:
             with urlopen(request) as response:
                 data = json.loads(response.read().decode("utf-8"))
@@ -179,49 +199,11 @@ class Edgee:
 
         return SendResponse(choices=choices, usage=usage)
 
-    def stream(
-        self,
-        model: str,
-        input: str | InputObject | dict,
-    ):
-        """Stream a completion request from the Edgee AI Gateway.
-
-        Yields StreamChunk objects as they arrive from the API.
-        """
-
-        if isinstance(input, str):
-            messages = [{"role": "user", "content": input}]
-            tools = None
-            tool_choice = None
-        elif isinstance(input, InputObject):
-            messages = input.messages
-            tools = input.tools
-            tool_choice = input.tool_choice
-        else:
-            messages = input.get("messages", [])
-            tools = input.get("tools")
-            tool_choice = input.get("tool_choice")
-
-        body: dict = {"model": model, "messages": messages, "stream": True}
-        if tools:
-            body["tools"] = tools
-        if tool_choice:
-            body["tool_choice"] = tool_choice
-
-        request = Request(
-            f"{self.base_url}{API_ENDPOINT}",
-            data=json.dumps(body).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}",
-            },
-            method="POST",
-        )
-
+    def _handle_streaming_response(self, request: Request):
+        """Handle streaming response, yielding StreamChunk objects."""
         try:
             with urlopen(request) as response:
                 # Read and parse SSE stream
-                buffer = ""
                 for line in response:
                     decoded_line = line.decode("utf-8")
 
@@ -262,3 +244,15 @@ class Edgee:
         except HTTPError as e:
             error_body = e.read().decode("utf-8")
             raise RuntimeError(f"API error {e.code}: {error_body}") from e
+
+    def stream(
+        self,
+        model: str,
+        input: str | InputObject | dict,
+    ):
+        """Stream a completion request from the Edgee AI Gateway.
+
+        Convenience method that calls send(stream=True).
+        Yields StreamChunk objects as they arrive from the API.
+        """
+        return self.send(model=model, input=input, stream=True)
