@@ -305,20 +305,3 @@ class Edgee:
         Yields StreamChunk objects as they arrive from the API.
         """
         return self.send(model=model, input=input, stream=True)
-
-    def stream_text(
-        self,
-        model: str,
-        input: str | InputObject | dict,
-    ):
-        """Stream only the text content from the completion.
-
-        Convenience method that yields only non-empty text strings,
-        filtering out chunks without content.
-
-        Yields:
-            str: Text content from each chunk
-        """
-        for chunk in self.stream(model=model, input=input):
-            if chunk.text:
-                yield chunk.text

@@ -63,16 +63,8 @@ print(f"Content: {response3.text}")
 print(f"Tool calls: {response3.tool_calls}")
 print()
 
-# Test 4: Streaming (simplest way)
-print("Test 4: Streaming (simplest way)")
-for text in edgee.stream_text(
-    model="mistral/mistral-small-latest", input="Tell me a short story about a robot"
-):
-    print(text, end="", flush=True)
-print("\n")
-
-# Test 5: Streaming with more control
-print("Test 5: Streaming with more control")
+# Test 4: Streaming
+print("Test 4: Streaming")
 for chunk in edgee.stream(model="mistral/mistral-small-latest", input="What is Python?"):
     if chunk.text:
         print(chunk.text, end="", flush=True)

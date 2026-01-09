@@ -73,18 +73,7 @@ if response.tool_calls:
 
 ### Streaming
 
-#### Simple Text Streaming
-
-The simplest way to stream text responses:
-
-```python
-for text in edgee.stream_text(model="gpt-4o", input="Tell me a story"):
-    print(text, end="", flush=True)
-```
-
-#### Streaming with More Control
-
-Access chunk properties when you need more control:
+Access chunk properties for streaming:
 
 ```python
 for chunk in edgee.stream(model="gpt-4o", input="Tell me a story"):
