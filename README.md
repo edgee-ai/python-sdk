@@ -1,6 +1,9 @@
-# Edgee Gateway SDK
+# Edgee Python SDK
 
-Lightweight Python SDK for Edgee AI Gateway.
+Lightweight, type-safe Python SDK for the [Edgee AI Gateway](https://www.edgee.cloud).
+
+[![PyPI version](https://img.shields.io/pypi/v/edgee.svg)]( )
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 ## Installation
 
@@ -8,151 +11,73 @@ Lightweight Python SDK for Edgee AI Gateway.
 pip install edgee
 ```
 
-## Usage
+## Quick Start
 
 ```python
 from edgee import Edgee
 
-edgee = Edgee(os.environ.get("EDGEE_API_KEY"))
-```
+edgee = Edgee("your-api-key")
 
-### Simple Input
-
-```python
+# Send a simple request
 response = edgee.send(
     model="gpt-4o",
-    input="What is the capital of France?",
+    input="What is the capital of France?"
 )
 
 print(response.text)
+# "The capital of France is Paris."
 ```
 
-### Full Input with Messages
+## Send Method
+
+The `send()` method makes non-streaming chat completion requests:
 
 ```python
 response = edgee.send(
     model="gpt-4o",
-    input={
-        "messages": [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Hello!"},
-        ],
-    },
-)
-```
-
-### With Tools
-
-```python
-response = edgee.send(
-    model="gpt-4o",
-    input={
-        "messages": [{"role": "user", "content": "What's the weather in Paris?"}],
-        "tools": [
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_weather",
-                    "description": "Get weather for a location",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "location": {"type": "string"},
-                        },
-                    },
-                },
-            },
-        ],
-        "tool_choice": "auto",
-    },
+    input="Hello, world!"
 )
 
-if response.tool_calls:
-    print(response.tool_calls)
+# Access response
+print(response.text)           # Text content
+print(response.finish_reason)  # Finish reason
+print(response.tool_calls)     # Tool calls (if any)
 ```
 
-### Streaming
+## Stream Method
 
-Access chunk properties for streaming:
-
-```python
-for chunk in edgee.stream(model="gpt-4o", input="Tell me a story"):
-    if chunk.text:
-        print(chunk.text, end="", flush=True)
-```
-
-#### Alternative: Using send(stream=True)
+The `stream()` method enables real-time streaming responses:
 
 ```python
-for chunk in edgee.send(model="gpt-4o", input="Tell me a story", stream=True):
+for chunk in edgee.stream("gpt-4o", "Tell me a story"):
     if chunk.text:
         print(chunk.text, end="", flush=True)
-```
-
-#### Accessing Full Chunk Data
-
-When you need complete access to the streaming response:
-
-```python
-for chunk in edgee.stream(model="gpt-4o", input="Hello"):
-    if chunk.role:
-        print(f"Role: {chunk.role}")
-    if chunk.text:
-        print(chunk.text, end="", flush=True)
+    
     if chunk.finish_reason:
-        print(f"\nFinish: {chunk.finish_reason}")
+        print(f"\nFinished: {chunk.finish_reason}")
 ```
 
-## Response
+## Features
 
-```python
-@dataclass
-class SendResponse:
-    choices: list[Choice]
-    usage: Optional[Usage]
+- ✅ **Type-safe** - Full type hints with dataclasses
+- ✅ **OpenAI-compatible** - Works with any model supported by Edgee
+- ✅ **Streaming** - Real-time response streaming with generators
+- ✅ **Tool calling** - Full support for function calling
+- ✅ **Flexible input** - Accept strings, dicts, or InputObject
+- ✅ **Zero dependencies** - Uses only Python standard library
 
-    # Convenience properties for easy access
-    text: str | None  # Shortcut for choices[0].message["content"]
-    message: dict | None  # Shortcut for choices[0].message
-    finish_reason: str | None  # Shortcut for choices[0].finish_reason
-    tool_calls: list | None  # Shortcut for choices[0].message["tool_calls"]
+## Documentation
 
-@dataclass
-class Choice:
-    index: int
-    message: dict  # {"role": str, "content": str | None, "tool_calls": list | None}
-    finish_reason: str | None
+For complete documentation, examples, and API reference, visit:
 
-@dataclass
-class Usage:
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
-```
+**👉 [Official Python SDK Documentation](https://www.edgee.cloud/docs/sdk/python)**
 
-### Streaming Response
+The documentation includes:
+- [Configuration guide](https://www.edgee.cloud/docs/sdk/python/configuration) - Multiple ways to configure the SDK
+- [Send method](https://www.edgee.cloud/docs/sdk/python/send) - Complete guide to non-streaming requests
+- [Stream method](https://www.edgee.cloud/docs/sdk/python/stream) - Streaming responses guide
+- [Tools](https://www.edgee.cloud/docs/sdk/python/tools) - Function calling guide
 
-```python
-@dataclass
-class StreamChunk:
-    choices: list[StreamChoice]
+## License
 
-    # Convenience properties for easy access
-    text: str | None  # Shortcut for choices[0].delta.content
-    role: str | None  # Shortcut for choices[0].delta.role
-    finish_reason: str | None  # Shortcut for choices[0].finish_reason
-
-@dataclass
-class StreamChoice:
-    index: int
-    delta: StreamDelta
-    finish_reason: str | None
-
-@dataclass
-class StreamDelta:
-    role: str | None  # Only present in first chunk
-    content: str | None
-    tool_calls: list[dict] | None
-```
-
-To learn more about this SDK, please refer to the [dedicated documentation](https://www.edgee.cloud/docs/sdk/python).
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
