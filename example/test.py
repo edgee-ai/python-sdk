@@ -6,7 +6,9 @@ import sys
 # Add parent directory to path for local testing
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from edgee import Edgee
+from pydantic import BaseModel
+
+from edgee import Edgee, Tool, create_tool
 
 edgee = Edgee(os.environ.get("EDGEE_API_KEY", "test-key"))
 
@@ -69,3 +71,100 @@ for chunk in edgee.stream(model="mistral/mistral-small-latest", input="What is P
     if chunk.text:
         print(chunk.text, end="", flush=True)
 print("\n")
+
+
+# Test 5: Tool class with automatic execution (agentic loop)
+print("Test 5: Tool class with automatic execution")
+
+
+# Define the tool schema using Pydantic
+class WeatherParams(BaseModel):
+    location: str
+
+
+# Define the tool handler
+def get_weather(params: WeatherParams) -> dict:
+    """Simulated weather API call."""
+    # In a real app, this would call a weather API
+    weather_data = {
+        "Paris": {"temperature": 18, "condition": "partly cloudy"},
+        "London": {"temperature": 12, "condition": "rainy"},
+        "New York": {"temperature": 22, "condition": "sunny"},
+    }
+    data = weather_data.get(
+        params.location, {"temperature": 20, "condition": "unknown"}
+    )
+    return {
+        "location": params.location,
+        "temperature": data["temperature"],
+        "condition": data["condition"],
+    }
+
+
+# Create the tool
+weather_tool = Tool(
+    name="get_weather",
+    description="Get the current weather for a location",
+    schema=WeatherParams,
+    handler=get_weather,
+)
+
+# Alternative: use create_tool helper
+# weather_tool = create_tool(
+#     name="get_weather",
+#     description="Get the current weather for a location",
+#     schema=WeatherParams,
+#     handler=get_weather,
+# )
+
+# Send request with automatic tool execution
+response5 = edgee.send(
+    model="gpt-4o",
+    input="What's the weather like in Paris?",
+    tools=[weather_tool],
+)
+print(f"Content: {response5.text}")
+print(f"Total usage: {response5.usage}")
+print()
+
+
+# Test 6: Multiple tools
+print("Test 6: Multiple tools")
+
+
+class CalculatorParams(BaseModel):
+    operation: str  # "add", "subtract", "multiply", "divide"
+    a: float
+    b: float
+
+
+def calculate(params: CalculatorParams) -> dict:
+    """Simple calculator."""
+    operations = {
+        "add": lambda a, b: a + b,
+        "subtract": lambda a, b: a - b,
+        "multiply": lambda a, b: a * b,
+        "divide": lambda a, b: a / b if b != 0 else "Error: division by zero",
+    }
+    op = operations.get(params.operation)
+    if op:
+        result = op(params.a, params.b)
+        return {"operation": params.operation, "a": params.a, "b": params.b, "result": result}
+    return {"error": f"Unknown operation: {params.operation}"}
+
+
+calculator_tool = Tool(
+    name="calculate",
+    description="Perform basic arithmetic operations (add, subtract, multiply, divide)",
+    schema=CalculatorParams,
+    handler=calculate,
+)
+
+response6 = edgee.send(
+    model="gpt-4o",
+    input="What's 25 multiplied by 4, and then what's the weather in London?",
+    tools=[weather_tool, calculator_tool],
+)
+print(f"Content: {response6.text}")
+print(f"Total usage: {response6.usage}")
+print()

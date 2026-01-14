@@ -5,7 +5,7 @@ description = "Lightweight Python SDK for Edgee AI Gateway"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["pydantic>=2.0.0"]
 authors = [
     { name = "Edgee", email = "support@edgee.cloud" }
 ]
