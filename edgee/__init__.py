@@ -2,8 +2,9 @@
 
 import json
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Type
+from typing import Any
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -71,7 +72,7 @@ class Tool:
     def __init__(
         self,
         name: str,
-        schema: Type[BaseModel],
+        schema: type[BaseModel],
         handler: Callable[..., Any],
         description: str | None = None,
     ):
@@ -109,7 +110,7 @@ class Tool:
 
 def create_tool(
     name: str,
-    schema: Type[BaseModel],
+    schema: type[BaseModel],
     handler: Callable[..., Any],
     description: str | None = None,
 ) -> Tool:
@@ -206,6 +207,15 @@ class SendResponse:
 
 
 @dataclass
+class StreamToolCallDelta:
+    """Partial tool call in a stream."""
+    index: int
+    id: str | None = None
+    type: str | None = None
+    function: dict | None = None  # {"name": str, "arguments": str}
+
+
+@dataclass
 class StreamDelta:
     role: str | None = None
     content: str | None = None
@@ -243,6 +253,47 @@ class StreamChunk:
         if self.choices and self.choices[0].finish_reason:
             return self.choices[0].finish_reason
         return None
+
+    @property
+    def tool_call_deltas(self) -> list[dict] | None:
+        """Get tool call deltas from the first choice."""
+        if self.choices and self.choices[0].delta.tool_calls:
+            return self.choices[0].delta.tool_calls
+        return None
+
+
+# Stream events for tool-enabled streaming
+@dataclass
+class ChunkEvent:
+    """A chunk of streamed content."""
+    type: str = "chunk"
+    chunk: StreamChunk = None
+
+
+@dataclass
+class ToolStartEvent:
+    """Tool execution is starting."""
+    type: str = "tool_start"
+    tool_call: dict = None
+
+
+@dataclass
+class ToolResultEvent:
+    """Tool execution completed."""
+    type: str = "tool_result"
+    tool_call_id: str = None
+    tool_name: str = None
+    result: Any = None
+
+
+@dataclass
+class IterationCompleteEvent:
+    """One iteration of the tool loop completed."""
+    type: str = "iteration_complete"
+    iteration: int = 0
+
+
+StreamEvent = ChunkEvent | ToolStartEvent | ToolResultEvent | IterationCompleteEvent
 
 
 @dataclass
@@ -541,10 +592,170 @@ class Edgee:
         self,
         model: str,
         input: str | InputObject | dict,
+        tools: list[Tool] | None = None,
+        max_tool_iterations: int = 10,
     ):
         """Stream a completion request from the Edgee AI Gateway.
 
-        Convenience method that calls send(stream=True).
-        Yields StreamChunk objects as they arrive from the API.
+        Args:
+            model: The model to use for completion
+            input: The input (string, dict, or InputObject)
+            tools: Optional list of Tool instances for automatic execution (simple mode only)
+            max_tool_iterations: Maximum number of tool execution iterations (default: 10)
+
+        Yields:
+            StreamChunk objects if no tools provided.
+            StreamEvent objects (ChunkEvent, ToolStartEvent, ToolResultEvent, IterationCompleteEvent)
+            if tools are provided.
+
+        Example without tools:
+            ```python
+            for chunk in edgee.stream("gpt-4o", "Hello!"):
+                print(chunk.text, end="")
+            ```
+
+        Example with tools:
+            ```python
+            for event in edgee.stream("gpt-4o", "What's the weather?", tools=[weather_tool]):
+                if event.type == "chunk":
+                    print(event.chunk.text, end="")
+                elif event.type == "tool_result":
+                    print(f"Tool result: {event.result}")
+            ```
         """
-        return self.send(model=model, input=input, stream=True)
+        # Simple mode with tools: use agentic streaming loop
+        if isinstance(input, str) and tools:
+            return self._stream_simple(model, input, tools, max_tool_iterations)
+
+        # Simple mode without tools or advanced mode: regular streaming
+        if isinstance(input, str):
+            messages = [{"role": "user", "content": input}]
+            return self._call_api(model, messages, stream=True)
+
+        # Advanced mode: full InputObject or dict
+        if isinstance(input, InputObject):
+            messages = input.messages
+            api_tools = input.tools
+            tool_choice = input.tool_choice
+        else:
+            messages = input.get("messages", [])
+            api_tools = input.get("tools")
+            tool_choice = input.get("tool_choice")
+
+        return self._call_api(
+            model, messages, api_tools=api_tools, tool_choice=tool_choice, stream=True
+        )
+
+    def _stream_simple(
+        self,
+        model: str,
+        input: str,
+        tools: list[Tool],
+        max_iterations: int,
+    ):
+        """Handle simple mode streaming with automatic tool execution.
+
+        Yields StreamEvent objects for chunks, tool starts, tool results, and iteration completion.
+        """
+        messages: list[dict] = [{"role": "user", "content": input}]
+        openai_tools = [t.to_dict() for t in tools]
+        tool_map = {t.name: t for t in tools}
+
+        for iteration in range(1, max_iterations + 1):
+            # Accumulate the full response from stream
+            role: str | None = None
+            content = ""
+            tool_calls_accumulator: dict[int, dict] = {}
+
+            # Stream the response
+            for chunk in self._call_api(model, messages, api_tools=openai_tools, stream=True):
+                # Yield the chunk as an event
+                yield ChunkEvent(chunk=chunk)
+
+                # Accumulate role
+                if chunk.role:
+                    role = chunk.role
+
+                # Accumulate content
+                if chunk.text:
+                    content += chunk.text
+
+                # Accumulate tool calls from deltas
+                tool_call_deltas = chunk.tool_call_deltas
+                if tool_call_deltas:
+                    for delta in tool_call_deltas:
+                        idx = delta.get("index", 0)
+                        if idx in tool_calls_accumulator:
+                            # Append to existing tool call
+                            existing = tool_calls_accumulator[idx]
+                            if delta.get("function", {}).get("arguments"):
+                                existing["function"]["arguments"] += delta["function"]["arguments"]
+                        else:
+                            # Start new tool call
+                            tool_calls_accumulator[idx] = {
+                                "id": delta.get("id", ""),
+                                "type": "function",
+                                "function": {
+                                    "name": delta.get("function", {}).get("name", ""),
+                                    "arguments": delta.get("function", {}).get("arguments", ""),
+                                },
+                            }
+
+            # Convert accumulated tool calls to list
+            tool_calls = list(tool_calls_accumulator.values())
+
+            # No tool calls? We're done
+            if not tool_calls:
+                return
+
+            # Add assistant's message (with tool_calls) to messages
+            assistant_message: dict = {
+                "role": role or "assistant",
+                "tool_calls": tool_calls,
+            }
+            if content:
+                assistant_message["content"] = content
+            messages.append(assistant_message)
+
+            # Execute each tool call and add results
+            for tool_call in tool_calls:
+                tool_name = tool_call["function"]["name"]
+                tool = tool_map.get(tool_name)
+
+                # Yield tool_start event
+                yield ToolStartEvent(tool_call=tool_call)
+
+                if tool:
+                    try:
+                        raw_args = json.loads(tool_call["function"]["arguments"])
+                        result = tool.execute(raw_args)
+                    except ValidationError as e:
+                        result = {"error": f"Invalid arguments: {e}"}
+                    except json.JSONDecodeError as e:
+                        result = {"error": f"Failed to parse arguments: {e}"}
+                    except Exception as e:
+                        result = {"error": f"Tool execution failed: {e}"}
+                else:
+                    result = {"error": f"Unknown tool: {tool_name}"}
+
+                # Yield tool_result event
+                yield ToolResultEvent(
+                    tool_call_id=tool_call["id"],
+                    tool_name=tool_name,
+                    result=result,
+                )
+
+                # Add tool result to messages
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call["id"],
+                    "content": result if isinstance(result, str) else json.dumps(result),
+                })
+
+            # Yield iteration complete event
+            yield IterationCompleteEvent(iteration=iteration)
+
+            # Loop continues - model will process tool results
+
+        # Max iterations reached
+        raise RuntimeError(f"Max tool iterations ({max_iterations}) reached")
