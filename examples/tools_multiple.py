@@ -26,9 +26,7 @@ def get_weather(params: WeatherParams) -> dict:
         "London": {"temperature": 12, "condition": "rainy"},
         "New York": {"temperature": 22, "condition": "sunny"},
     }
-    data = weather_data.get(
-        params.location, {"temperature": 20, "condition": "unknown"}
-    )
+    data = weather_data.get(params.location, {"temperature": 20, "condition": "unknown"})
     return {
         "location": params.location,
         "temperature": data["temperature"],

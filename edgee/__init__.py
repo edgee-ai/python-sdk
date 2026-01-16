@@ -209,6 +209,7 @@ class SendResponse:
 @dataclass
 class StreamToolCallDelta:
     """Partial tool call in a stream."""
+
     index: int
     id: str | None = None
     type: str | None = None
@@ -266,6 +267,7 @@ class StreamChunk:
 @dataclass
 class ChunkEvent:
     """A chunk of streamed content."""
+
     type: str = "chunk"
     chunk: StreamChunk = None
 
@@ -273,6 +275,7 @@ class ChunkEvent:
 @dataclass
 class ToolStartEvent:
     """Tool execution is starting."""
+
     type: str = "tool_start"
     tool_call: dict = None
 
@@ -280,6 +283,7 @@ class ToolStartEvent:
 @dataclass
 class ToolResultEvent:
     """Tool execution completed."""
+
     type: str = "tool_result"
     tool_call_id: str = None
     tool_name: str = None
@@ -289,6 +293,7 @@ class ToolResultEvent:
 @dataclass
 class IterationCompleteEvent:
     """One iteration of the tool loop completed."""
+
     type: str = "iteration_complete"
     iteration: int = 0
 
@@ -424,8 +429,12 @@ class Edgee:
                     total_usage.prompt_tokens += response.usage.prompt_tokens
                     total_usage.completion_tokens += response.usage.completion_tokens
                     total_usage.total_tokens += response.usage.total_tokens
-                    total_usage.input_tokens_details.cached_tokens += response.usage.input_tokens_details.cached_tokens
-                    total_usage.output_tokens_details.reasoning_tokens += response.usage.output_tokens_details.reasoning_tokens
+                    total_usage.input_tokens_details.cached_tokens += (
+                        response.usage.input_tokens_details.cached_tokens
+                    )
+                    total_usage.output_tokens_details.reasoning_tokens += (
+                        response.usage.output_tokens_details.reasoning_tokens
+                    )
 
             # No tool calls? We're done - return final response
             if not response.tool_calls:
@@ -453,11 +462,13 @@ class Edgee:
                     result = {"error": f"Unknown tool: {tool_name}"}
 
                 # Add tool result to messages
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call["id"],
-                    "content": result if isinstance(result, str) else json.dumps(result),
-                })
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "content": result if isinstance(result, str) else json.dumps(result),
+                    }
+                )
 
             # Loop continues - model will process tool results
 
@@ -536,7 +547,9 @@ class Edgee:
                     cached_tokens=usage_data.get("input_tokens_details", {}).get("cached_tokens", 0)
                 ),
                 output_tokens_details=OutputTokenDetails(
-                    reasoning_tokens=usage_data.get("output_tokens_details", {}).get("reasoning_tokens", 0)
+                    reasoning_tokens=usage_data.get("output_tokens_details", {}).get(
+                        "reasoning_tokens", 0
+                    )
                 ),
             )
 
@@ -746,11 +759,13 @@ class Edgee:
                 )
 
                 # Add tool result to messages
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call["id"],
-                    "content": result if isinstance(result, str) else json.dumps(result),
-                })
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "content": result if isinstance(result, str) else json.dumps(result),
+                    }
+                )
 
             # Yield iteration complete event
             yield IterationCompleteEvent(iteration=iteration)
