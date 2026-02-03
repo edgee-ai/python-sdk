@@ -46,8 +46,12 @@ class InputObject:
     tools: list[dict] | None = None
     tool_choice: str | dict | None = None
     tags: list[str] | None = None
-    enable_compression: bool | None = None  # Enable token compression (gateway-internal, not sent to providers)
-    compression_rate: float | None = None  # Compression rate 0.0-1.0 (gateway-internal, not sent to providers)
+    enable_compression: bool | None = (
+        None  # Enable token compression (gateway-internal, not sent to providers)
+    )
+    compression_rate: float | None = (
+        None  # Compression rate 0.0-1.0 (gateway-internal, not sent to providers)
+    )
 
 
 @dataclass
