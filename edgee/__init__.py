@@ -69,9 +69,17 @@ class Usage:
 
 
 @dataclass
+class Compression:
+    input_tokens: int
+    saved_tokens: int
+    rate: float
+
+
+@dataclass
 class SendResponse:
     choices: list[Choice]
     usage: Usage | None = None
+    compression: Compression | None = None
 
     @property
     def text(self) -> str | None:
