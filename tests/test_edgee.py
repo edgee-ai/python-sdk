@@ -306,3 +306,50 @@ class TestEdgeeSend:
 
         call_args = mock_urlopen.call_args[0][0]
         assert call_args.full_url == f"{config_base_url}/v1/chat/completions"
+
+    @patch("edgee.urlopen")
+    def test_send_with_compression_response(self, mock_urlopen):
+        """Should handle response with compression field"""
+        mock_response_data = {
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+            "compression": {
+                "input_tokens": 100,
+                "saved_tokens": 42,
+                "rate": 0.6102003642987249,
+            },
+        }
+        mock_urlopen.return_value = self._mock_response(mock_response_data)
+
+        client = Edgee("test-api-key")
+        result = client.send(model="gpt-4", input="Test")
+
+        assert result.compression is not None
+        assert result.compression.input_tokens == 100
+        assert result.compression.saved_tokens == 42
+        assert result.compression.rate == 0.6102003642987249
+
+    @patch("edgee.urlopen")
+    def test_send_without_compression_response(self, mock_urlopen):
+        """Should handle response without compression field"""
+        mock_response_data = {
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Response"},
+                    "finish_reason": "stop",
+                }
+            ],
+        }
+        mock_urlopen.return_value = self._mock_response(mock_response_data)
+
+        client = Edgee("test-api-key")
+        result = client.send(model="gpt-4", input="Test")
+
+        assert result.compression is None

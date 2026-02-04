@@ -46,6 +46,12 @@ class InputObject:
     tools: list[dict] | None = None
     tool_choice: str | dict | None = None
     tags: list[str] | None = None
+    enable_compression: bool | None = (
+        None  # Enable token compression (gateway-internal, not sent to providers)
+    )
+    compression_rate: float | None = (
+        None  # Compression rate 0.0-1.0 (gateway-internal, not sent to providers)
+    )
 
 
 @dataclass
@@ -63,9 +69,17 @@ class Usage:
 
 
 @dataclass
+class Compression:
+    input_tokens: int
+    saved_tokens: int
+    rate: float
+
+
+@dataclass
 class SendResponse:
     choices: list[Choice]
     usage: Usage | None = None
+    compression: Compression | None = None
 
     @property
     def text(self) -> str | None:
@@ -190,16 +204,22 @@ class Edgee:
             tools = None
             tool_choice = None
             tags = None
+            enable_compression = None
+            compression_rate = None
         elif isinstance(input, InputObject):
             messages = input.messages
             tools = input.tools
             tool_choice = input.tool_choice
             tags = input.tags
+            enable_compression = input.enable_compression
+            compression_rate = input.compression_rate
         else:
             messages = input.get("messages", [])
             tools = input.get("tools")
             tool_choice = input.get("tool_choice")
             tags = input.get("tags")
+            enable_compression = input.get("enable_compression")
+            compression_rate = input.get("compression_rate")
 
         body: dict = {"model": model, "messages": messages}
         if stream:
@@ -210,6 +230,10 @@ class Edgee:
             body["tool_choice"] = tool_choice
         if tags:
             body["tags"] = tags
+        if enable_compression is not None:
+            body["enable_compression"] = enable_compression
+        if compression_rate is not None:
+            body["compression_rate"] = compression_rate
 
         request = Request(
             f"{self.base_url}{API_ENDPOINT}",
@@ -252,7 +276,15 @@ class Edgee:
                 total_tokens=data["usage"]["total_tokens"],
             )
 
-        return SendResponse(choices=choices, usage=usage)
+        compression = None
+        if "compression" in data:
+            compression = Compression(
+                input_tokens=data["compression"]["input_tokens"],
+                saved_tokens=data["compression"]["saved_tokens"],
+                rate=data["compression"]["rate"],
+            )
+
+        return SendResponse(choices=choices, usage=usage, compression=compression)
 
     def _handle_streaming_response(self, request: Request):
         """Handle streaming response, yielding StreamChunk objects."""
