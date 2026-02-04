@@ -42,6 +42,15 @@ response = edgee.send(
 print(response.text)           # Text content
 print(response.finish_reason)  # Finish reason
 print(response.tool_calls)     # Tool calls (if any)
+
+# Access usage and compression info
+if response.usage:
+    print(f"Tokens used: {response.usage.total_tokens}")
+
+if response.compression:
+    print(f"Input tokens: {response.compression.input_tokens}")
+    print(f"Saved tokens: {response.compression.saved_tokens}")
+    print(f"Compression rate: {response.compression.rate}")
 ```
 
 ## Stream Method
@@ -64,6 +73,7 @@ for chunk in edgee.stream("gpt-4o", "Tell me a story"):
 - ✅ **Streaming** - Real-time response streaming with generators
 - ✅ **Tool calling** - Full support for function calling
 - ✅ **Flexible input** - Accept strings, dicts, or InputObject
+- ✅ **Compression info** - Access token compression metrics in responses
 - ✅ **Zero dependencies** - Uses only Python standard library
 
 ## Documentation
