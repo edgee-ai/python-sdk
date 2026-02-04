@@ -121,7 +121,7 @@ if response.compression:
     )
     print(f"  Savings: {savings_pct:.1f}% of input tokens saved!")
     print()
-    print(f"  💡 Without compression, this request would have used")
+    print("  💡 Without compression, this request would have used")
     print(f"     {response.compression.input_tokens} input tokens.")
     print(
         f"     With compression, only {response.compression.input_tokens - response.compression.saved_tokens} tokens were processed!"
