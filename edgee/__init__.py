@@ -276,7 +276,15 @@ class Edgee:
                 total_tokens=data["usage"]["total_tokens"],
             )
 
-        return SendResponse(choices=choices, usage=usage)
+        compression = None
+        if "compression" in data:
+            compression = Compression(
+                input_tokens=data["compression"]["input_tokens"],
+                saved_tokens=data["compression"]["saved_tokens"],
+                rate=data["compression"]["rate"],
+            )
+
+        return SendResponse(choices=choices, usage=usage, compression=compression)
 
     def _handle_streaming_response(self, request: Request):
         """Handle streaming response, yielding StreamChunk objects."""
