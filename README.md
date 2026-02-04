@@ -1,6 +1,6 @@
 # Edgee Python SDK
 
-Lightweight, type-safe Python SDK for the [Edgee AI Gateway](https://www.edgee.cloud).
+Lightweight, type-safe Python SDK for the [Edgee AI Gateway](https://www.edgee.ai).
 
 [![PyPI version](https://img.shields.io/pypi/v/edgee.svg)]( )
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -70,13 +70,13 @@ for chunk in edgee.stream("gpt-4o", "Tell me a story"):
 
 For complete documentation, examples, and API reference, visit:
 
-**👉 [Official Python SDK Documentation](https://www.edgee.cloud/docs/sdk/python)**
+**👉 [Official Python SDK Documentation](https://www.edgee.ai/docs/sdk/python)**
 
 The documentation includes:
-- [Configuration guide](https://www.edgee.cloud/docs/sdk/python/configuration) - Multiple ways to configure the SDK
-- [Send method](https://www.edgee.cloud/docs/sdk/python/send) - Complete guide to non-streaming requests
-- [Stream method](https://www.edgee.cloud/docs/sdk/python/stream) - Streaming responses guide
-- [Tools](https://www.edgee.cloud/docs/sdk/python/tools) - Function calling guide
+- [Configuration guide](https://www.edgee.ai/docs/sdk/python/configuration) - Multiple ways to configure the SDK
+- [Send method](https://www.edgee.ai/docs/sdk/python/send) - Complete guide to non-streaming requests
+- [Stream method](https://www.edgee.ai/docs/sdk/python/stream) - Streaming responses guide
+- [Tools](https://www.edgee.ai/docs/sdk/python/tools) - Function calling guide
 
 ## License
 
