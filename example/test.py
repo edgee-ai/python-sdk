@@ -37,7 +37,7 @@ print()
 # Test 3: With tools
 print("Test 3: With tools")
 response3 = edgee.send(
-    model="gpt-4o",
+    model="gpt-5.2",
     input={
         "messages": [{"role": "user", "content": "What is the weather in Paris?"}],
         "tools": [

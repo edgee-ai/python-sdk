@@ -87,7 +87,7 @@ user_message = f"""Here is some context about AI:
 Based on this context, summarize the key milestones in AI development in 3 bullet points."""
 
 response = edgee.send(
-    model="gpt-4o",
+    model="gpt-5.2",
     input={
         "messages": [
             {"role": "user", "content": user_message},
