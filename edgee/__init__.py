@@ -68,12 +68,6 @@ class InputObject:
     compression_semantic_preservation_threshold: int | None = (
         None  # Semantic preservation threshold 0-100 (gateway-internal)
     )
-    enable_compression: bool | None = (
-        None  # DEPRECATED: Use compression_model instead
-    )
-    compression_technique: str | None = (
-        None  # DEPRECATED: Use compression_model instead
-    )
 
 
 @dataclass
@@ -230,8 +224,6 @@ class Edgee:
             compression_model = None
             compression_rate = None
             compression_semantic_preservation_threshold = None
-            enable_compression = None
-            compression_technique = None
         elif isinstance(input, InputObject):
             messages = input.messages
             tools = input.tools
@@ -240,8 +232,6 @@ class Edgee:
             compression_model = input.compression_model
             compression_rate = input.compression_rate
             compression_semantic_preservation_threshold = input.compression_semantic_preservation_threshold
-            enable_compression = input.enable_compression
-            compression_technique = input.compression_technique
         else:
             messages = input.get("messages", [])
             tools = input.get("tools")
@@ -250,8 +240,6 @@ class Edgee:
             compression_model = input.get("compression_model")
             compression_rate = input.get("compression_rate")
             compression_semantic_preservation_threshold = input.get("compression_semantic_preservation_threshold")
-            enable_compression = input.get("enable_compression")
-            compression_technique = input.get("compression_technique")
 
         body: dict = {"model": model, "messages": messages}
         if stream:
@@ -268,10 +256,6 @@ class Edgee:
             body["compression_rate"] = compression_rate
         if compression_semantic_preservation_threshold is not None:
             body["compression_semantic_preservation_threshold"] = compression_semantic_preservation_threshold
-        if enable_compression is not None:
-            body["enable_compression"] = enable_compression
-        if compression_technique is not None:
-            body["compression_technique"] = compression_technique
 
         request = Request(
             f"{self.base_url}{API_ENDPOINT}",
