@@ -65,6 +65,12 @@ class InputObject:
     compression_rate: float | None = (
         None  # Compression rate 0.0-1.0 (gateway-internal, not sent to providers)
     )
+    enable_claude_compression: bool | None = (
+        None  # Enable Claude-specific tool compression (gateway-internal, not sent to providers)
+    )
+    enable_opencode_compression: bool | None = (
+        None  # Enable OpenCode-specific tool compression (gateway-internal, not sent to providers)
+    )
 
 
 @dataclass
@@ -220,6 +226,8 @@ class Edgee:
             tags = None
             enable_compression = None
             compression_rate = None
+            enable_claude_compression = None
+            enable_opencode_compression = None
         elif isinstance(input, InputObject):
             messages = input.messages
             tools = input.tools
@@ -227,6 +235,8 @@ class Edgee:
             tags = input.tags
             enable_compression = input.enable_compression
             compression_rate = input.compression_rate
+            enable_claude_compression = input.enable_claude_compression
+            enable_opencode_compression = input.enable_opencode_compression
         else:
             messages = input.get("messages", [])
             tools = input.get("tools")
@@ -234,6 +244,8 @@ class Edgee:
             tags = input.get("tags")
             enable_compression = input.get("enable_compression")
             compression_rate = input.get("compression_rate")
+            enable_claude_compression = input.get("enable_claude_compression")
+            enable_opencode_compression = input.get("enable_opencode_compression")
 
         body: dict = {"model": model, "messages": messages}
         if stream:
@@ -248,6 +260,10 @@ class Edgee:
             body["enable_compression"] = enable_compression
         if compression_rate is not None:
             body["compression_rate"] = compression_rate
+        if enable_claude_compression is not None:
+            body["enable_claude_compression"] = enable_claude_compression
+        if enable_opencode_compression is not None:
+            body["enable_opencode_compression"] = enable_opencode_compression
 
         request = Request(
             f"{self.base_url}{API_ENDPOINT}",
