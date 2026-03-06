@@ -59,17 +59,20 @@ class InputObject:
     tools: list[dict] | None = None
     tool_choice: str | dict | None = None
     tags: list[str] | None = None
-    enable_compression: bool | None = (
-        None  # Enable token compression (gateway-internal, not sent to providers)
+    compression_model: str | None = (
+        None  # Compression model: agentic, claude, opencode, cursor, customer (gateway-internal)
     )
     compression_rate: float | None = (
         None  # Compression rate 0.0-1.0 (gateway-internal, not sent to providers)
     )
-    enable_claude_compression: bool | None = (
-        None  # Enable Claude-specific tool compression (gateway-internal, not sent to providers)
+    compression_semantic_preservation_threshold: int | None = (
+        None  # Semantic preservation threshold 0-100 (gateway-internal)
     )
-    enable_opencode_compression: bool | None = (
-        None  # Enable OpenCode-specific tool compression (gateway-internal, not sent to providers)
+    enable_compression: bool | None = (
+        None  # DEPRECATED: Use compression_model instead
+    )
+    compression_technique: str | None = (
+        None  # DEPRECATED: Use compression_model instead
     )
 
 
@@ -224,28 +227,31 @@ class Edgee:
             tools = None
             tool_choice = None
             tags = None
-            enable_compression = None
+            compression_model = None
             compression_rate = None
-            enable_claude_compression = None
-            enable_opencode_compression = None
+            compression_semantic_preservation_threshold = None
+            enable_compression = None
+            compression_technique = None
         elif isinstance(input, InputObject):
             messages = input.messages
             tools = input.tools
             tool_choice = input.tool_choice
             tags = input.tags
-            enable_compression = input.enable_compression
+            compression_model = input.compression_model
             compression_rate = input.compression_rate
-            enable_claude_compression = input.enable_claude_compression
-            enable_opencode_compression = input.enable_opencode_compression
+            compression_semantic_preservation_threshold = input.compression_semantic_preservation_threshold
+            enable_compression = input.enable_compression
+            compression_technique = input.compression_technique
         else:
             messages = input.get("messages", [])
             tools = input.get("tools")
             tool_choice = input.get("tool_choice")
             tags = input.get("tags")
-            enable_compression = input.get("enable_compression")
+            compression_model = input.get("compression_model")
             compression_rate = input.get("compression_rate")
-            enable_claude_compression = input.get("enable_claude_compression")
-            enable_opencode_compression = input.get("enable_opencode_compression")
+            compression_semantic_preservation_threshold = input.get("compression_semantic_preservation_threshold")
+            enable_compression = input.get("enable_compression")
+            compression_technique = input.get("compression_technique")
 
         body: dict = {"model": model, "messages": messages}
         if stream:
@@ -256,14 +262,16 @@ class Edgee:
             body["tool_choice"] = tool_choice
         if tags:
             body["tags"] = tags
-        if enable_compression is not None:
-            body["enable_compression"] = enable_compression
+        if compression_model is not None:
+            body["compression_model"] = compression_model
         if compression_rate is not None:
             body["compression_rate"] = compression_rate
-        if enable_claude_compression is not None:
-            body["enable_claude_compression"] = enable_claude_compression
-        if enable_opencode_compression is not None:
-            body["enable_opencode_compression"] = enable_opencode_compression
+        if compression_semantic_preservation_threshold is not None:
+            body["compression_semantic_preservation_threshold"] = compression_semantic_preservation_threshold
+        if enable_compression is not None:
+            body["enable_compression"] = enable_compression
+        if compression_technique is not None:
+            body["compression_technique"] = compression_technique
 
         request = Request(
             f"{self.base_url}{API_ENDPOINT}",
