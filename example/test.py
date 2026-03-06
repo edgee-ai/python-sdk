@@ -37,7 +37,7 @@ print()
 # Test 3: With tools
 print("Test 3: With tools")
 response3 = edgee.send(
-    model="anthropic/claude-haiku-4-5", 
+    model="anthropic/claude-haiku-4-5",
     input={
         "messages": [{"role": "user", "content": "What is the weather in Paris?"}],
         "tools": [
