@@ -20,7 +20,7 @@ edgee = Edgee("your-api-key")
 
 # Send a simple request
 response = edgee.send(
-    model="gpt-5.2",
+    model="anthropic/claude-haiku-4-5",
     input="What is the capital of France?"
 )
 
@@ -34,7 +34,7 @@ The `send()` method makes non-streaming chat completion requests:
 
 ```python
 response = edgee.send(
-    model="gpt-5.2",
+    model="anthropic/claude-haiku-4-5",
     input="Hello, world!"
 )
 
@@ -48,9 +48,10 @@ if response.usage:
     print(f"Tokens used: {response.usage.total_tokens}")
 
 if response.compression:
-    print(f"Input tokens: {response.compression.input_tokens}")
     print(f"Saved tokens: {response.compression.saved_tokens}")
-    print(f"Compression rate: {response.compression.rate}")
+    print(f"Reduction: {response.compression.reduction}%")
+    print(f"Cost savings: ${response.compression.cost_savings / 1_000_000:.3f}")
+    print(f"Time: {response.compression.time_ms} ms")
 ```
 
 ## Stream Method
@@ -58,7 +59,7 @@ if response.compression:
 The `stream()` method enables real-time streaming responses:
 
 ```python
-for chunk in edgee.stream("gpt-5.2", "Tell me a story"):
+for chunk in edgee.stream("anthropic/claude-haiku-4-5", "Tell me a story"):
     if chunk.text:
         print(chunk.text, end="", flush=True)
     

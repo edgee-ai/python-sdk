@@ -2,6 +2,7 @@
 
 import json
 import os
+import ssl
 from dataclasses import dataclass
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -9,6 +10,18 @@ from urllib.request import Request, urlopen
 # API Configuration
 DEFAULT_BASE_URL = "https://api.edgee.ai"
 API_ENDPOINT = "/v1/chat/completions"
+
+
+def _ssl_context() -> ssl.SSLContext:
+    """Create SSL context. Uses certifi's CA bundle when available (fixes cert issues on macOS)."""
+    ctx = ssl.create_default_context()
+    try:
+        import certifi
+
+        ctx.load_verify_locations(certifi.where())
+    except ImportError:
+        pass  # Use default system/store certs
+    return ctx
 
 
 @dataclass
@@ -70,9 +83,10 @@ class Usage:
 
 @dataclass
 class Compression:
-    input_tokens: int
     saved_tokens: int
-    rate: float
+    cost_savings: int  # micro-units (e.g. 27000 = $0.027)
+    reduction: int  # percentage (e.g. 48 = 48%)
+    time_ms: int  # milliseconds
 
 
 @dataclass
@@ -253,7 +267,7 @@ class Edgee:
     def _handle_non_streaming_response(self, request: Request) -> SendResponse:
         """Handle non-streaming response."""
         try:
-            with urlopen(request) as response:
+            with urlopen(request, context=_ssl_context()) as response:
                 data = json.loads(response.read().decode("utf-8"))
         except HTTPError as e:
             error_body = e.read().decode("utf-8")
@@ -279,9 +293,10 @@ class Edgee:
         compression = None
         if "compression" in data:
             compression = Compression(
-                input_tokens=data["compression"]["input_tokens"],
                 saved_tokens=data["compression"]["saved_tokens"],
-                rate=data["compression"]["rate"],
+                cost_savings=data["compression"]["cost_savings"],
+                reduction=data["compression"]["reduction"],
+                time_ms=data["compression"]["time_ms"],
             )
 
         return SendResponse(choices=choices, usage=usage, compression=compression)
@@ -289,7 +304,7 @@ class Edgee:
     def _handle_streaming_response(self, request: Request):
         """Handle streaming response, yielding StreamChunk objects."""
         try:
-            with urlopen(request) as response:
+            with urlopen(request, context=_ssl_context()) as response:
                 # Read and parse SSE stream
                 for line in response:
                     decoded_line = line.decode("utf-8")

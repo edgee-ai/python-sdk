@@ -13,7 +13,7 @@ edgee = Edgee(os.environ.get("EDGEE_API_KEY", "test-key"))
 # Test 1: Simple string input
 print("Test 1: Simple string input")
 response1 = edgee.send(
-    model="mistral/mistral-small-latest",
+    model="anthropic/claude-haiku-4-5",
     input="What is the capital of France?",
 )
 print(f"Content: {response1.text}")
@@ -23,7 +23,7 @@ print()
 # Test 2: Full input object with messages
 print("Test 2: Full input object with messages")
 response2 = edgee.send(
-    model="mistral/mistral-small-latest",
+    model="anthropic/claude-haiku-4-5",
     input={
         "messages": [
             {"role": "system", "content": "You are a helpful assistant."},
@@ -37,7 +37,7 @@ print()
 # Test 3: With tools
 print("Test 3: With tools")
 response3 = edgee.send(
-    model="gpt-5.2",
+    model="anthropic/claude-haiku-4-5", 
     input={
         "messages": [{"role": "user", "content": "What is the weather in Paris?"}],
         "tools": [
@@ -65,7 +65,7 @@ print()
 
 # Test 4: Streaming
 print("Test 4: Streaming")
-for chunk in edgee.stream(model="mistral/mistral-small-latest", input="What is Python?"):
+for chunk in edgee.stream(model="anthropic/claude-haiku-4-5", input="What is Python?"):
     if chunk.text:
         print(chunk.text, end="", flush=True)
 print("\n")
