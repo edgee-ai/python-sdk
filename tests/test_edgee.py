@@ -320,9 +320,10 @@ class TestEdgeeSend:
             ],
             "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
             "compression": {
-                "input_tokens": 100,
                 "saved_tokens": 42,
-                "rate": 0.6102003642987249,
+                "cost_savings": 27000,
+                "reduction": 48,
+                "time_ms": 150,
             },
         }
         mock_urlopen.return_value = self._mock_response(mock_response_data)
@@ -331,9 +332,10 @@ class TestEdgeeSend:
         result = client.send(model="gpt-4", input="Test")
 
         assert result.compression is not None
-        assert result.compression.input_tokens == 100
         assert result.compression.saved_tokens == 42
-        assert result.compression.rate == 0.6102003642987249
+        assert result.compression.cost_savings == 27000
+        assert result.compression.reduction == 48
+        assert result.compression.time_ms == 150
 
     @patch("edgee.urlopen")
     def test_send_without_compression_response(self, mock_urlopen):

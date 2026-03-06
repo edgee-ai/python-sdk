@@ -87,7 +87,7 @@ user_message = f"""Here is some context about AI:
 Based on this context, summarize the key milestones in AI development in 3 bullet points."""
 
 response = edgee.send(
-    model="gpt-5.2",
+    model="anthropic/claude-haiku-4-5",
     input={
         "messages": [
             {"role": "user", "content": user_message},
@@ -111,21 +111,17 @@ if response.usage:
 # Display compression information
 if response.compression:
     print("Compression Metrics:")
-    print(f"  Input tokens:  {response.compression.input_tokens}")
     print(f"  Saved tokens:  {response.compression.saved_tokens}")
-    print(f"  Compression rate: {response.compression.rate:.2%}")
-    savings_pct = (
-        (response.compression.saved_tokens / response.compression.input_tokens * 100)
-        if response.compression.input_tokens > 0
-        else 0
-    )
-    print(f"  Savings: {savings_pct:.1f}% of input tokens saved!")
-    print()
-    print("  💡 Without compression, this request would have used")
-    print(f"     {response.compression.input_tokens} input tokens.")
-    print(
-        f"     With compression, only {response.compression.input_tokens - response.compression.saved_tokens} tokens were processed!"
-    )
+    print(f"  Reduction:     {response.compression.reduction}%")
+    print(f"  Cost savings:  ${response.compression.cost_savings / 1_000_000:.3f}")
+    print(f"  Time:          {response.compression.time_ms} ms")
+    if response.compression.reduction > 0:
+        original_tokens = response.compression.saved_tokens * 100 // response.compression.reduction
+        tokens_after = original_tokens - response.compression.saved_tokens
+        print()
+        print("  💡 Without compression, this request would have used")
+        print(f"     {original_tokens} input tokens.")
+        print(f"     With compression, only {tokens_after} tokens were processed!")
 else:
     print("No compression data available in response.")
     print("Note: Compression data is only returned when compression is enabled")

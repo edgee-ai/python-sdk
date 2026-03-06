@@ -1,6 +1,6 @@
 [project]
 name = "edgee"
-version = "1.0.1"
+version = "1.0.2"
 description = "Lightweight Python SDK for Edgee AI Gateway"
 readme = "README.md"
 license = "Apache-2.0"
@@ -25,6 +25,8 @@ Repository = "https://github.com/edgee-ai/python-sdk"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0", "ruff>=0.8.0"]
+# Install certifi to fix SSL certificate verification on macOS (Python.org installs)
+ssl = ["certifi>=2024.0.0"]
 
 [build-system]
 requires = ["hatchling"]
