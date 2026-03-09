@@ -92,8 +92,10 @@ response = edgee.send(
         "messages": [
             {"role": "user", "content": user_message},
         ],
-        "enable_compression": True,
-        "compression_rate": 0.5,
+        "compression_model": "agentic",
+        "compression_configuration": {
+            "rate": 0.5,
+        },
     },
 )
 

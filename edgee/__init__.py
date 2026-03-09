@@ -59,11 +59,11 @@ class InputObject:
     tools: list[dict] | None = None
     tool_choice: str | dict | None = None
     tags: list[str] | None = None
-    enable_compression: bool | None = (
-        None  # Enable token compression (gateway-internal, not sent to providers)
+    compression_model: str | None = (
+        None  # Compression model: agentic, claude, opencode, cursor, customer (gateway-internal)
     )
-    compression_rate: float | None = (
-        None  # Compression rate 0.0-1.0 (gateway-internal, not sent to providers)
+    compression_configuration: dict | None = (
+        None  # Configuration for compression model: {"rate": 0.7, "semantic_preservation_threshold": 60}
     )
 
 
@@ -218,22 +218,22 @@ class Edgee:
             tools = None
             tool_choice = None
             tags = None
-            enable_compression = None
-            compression_rate = None
+            compression_model = None
+            compression_configuration = None
         elif isinstance(input, InputObject):
             messages = input.messages
             tools = input.tools
             tool_choice = input.tool_choice
             tags = input.tags
-            enable_compression = input.enable_compression
-            compression_rate = input.compression_rate
+            compression_model = input.compression_model
+            compression_configuration = input.compression_configuration
         else:
             messages = input.get("messages", [])
             tools = input.get("tools")
             tool_choice = input.get("tool_choice")
             tags = input.get("tags")
-            enable_compression = input.get("enable_compression")
-            compression_rate = input.get("compression_rate")
+            compression_model = input.get("compression_model")
+            compression_configuration = input.get("compression_configuration")
 
         body: dict = {"model": model, "messages": messages}
         if stream:
@@ -244,10 +244,10 @@ class Edgee:
             body["tool_choice"] = tool_choice
         if tags:
             body["tags"] = tags
-        if enable_compression is not None:
-            body["enable_compression"] = enable_compression
-        if compression_rate is not None:
-            body["compression_rate"] = compression_rate
+        if compression_model is not None:
+            body["compression_model"] = compression_model
+        if compression_configuration is not None:
+            body["compression_configuration"] = compression_configuration
 
         request = Request(
             f"{self.base_url}{API_ENDPOINT}",
