@@ -1,6 +1,6 @@
 [project]
 name = "edgee"
-version = "1.0.3"
+version = "1.0.4"
 description = "Lightweight Python SDK for Edgee AI Gateway"
 readme = "README.md"
 license = "Apache-2.0"
