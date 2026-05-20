@@ -24,7 +24,7 @@ Homepage = "https://github.com/edgee-ai/python-sdk"
 Repository = "https://github.com/edgee-ai/python-sdk"
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0.0", "ruff>=0.8.0"]
+dev = ["pytest>=9.0.3", "ruff>=0.8.0"]
 # Install certifi to fix SSL certificate verification on macOS (Python.org installs)
 ssl = ["certifi>=2024.0.0"]
 
@@ -58,4 +58,4 @@ quote-style = "double"
 indent-style = "space"
 
 [dependency-groups]
-dev = ["pytest>=8.0.0", "ruff>=0.8.0"]
+dev = ["pytest>=9.0.3", "ruff>=0.8.0"]
