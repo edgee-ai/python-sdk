@@ -60,10 +60,7 @@ class InputObject:
     tool_choice: str | dict | None = None
     tags: list[str] | None = None
     compression_model: str | None = (
-        None  # Compression model: agentic, claude, opencode, cursor, customer (gateway-internal)
-    )
-    compression_configuration: dict | None = (
-        None  # Configuration for compression model: {"rate": 0.7, "semantic_preservation_threshold": 60}
+        None  # Compression model: claude, opencode, cursor, customer (gateway-internal)
     )
 
 
@@ -219,21 +216,18 @@ class Edgee:
             tool_choice = None
             tags = None
             compression_model = None
-            compression_configuration = None
         elif isinstance(input, InputObject):
             messages = input.messages
             tools = input.tools
             tool_choice = input.tool_choice
             tags = input.tags
             compression_model = input.compression_model
-            compression_configuration = input.compression_configuration
         else:
             messages = input.get("messages", [])
             tools = input.get("tools")
             tool_choice = input.get("tool_choice")
             tags = input.get("tags")
             compression_model = input.get("compression_model")
-            compression_configuration = input.get("compression_configuration")
 
         body: dict = {"model": model, "messages": messages}
         if stream:
@@ -246,8 +240,6 @@ class Edgee:
             body["tags"] = tags
         if compression_model is not None:
             body["compression_model"] = compression_model
-        if compression_configuration is not None:
-            body["compression_configuration"] = compression_configuration
 
         request = Request(
             f"{self.base_url}{API_ENDPOINT}",
