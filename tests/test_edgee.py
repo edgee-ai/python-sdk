@@ -102,7 +102,7 @@ class TestEdgeeSend:
 
         # Verify the request
         call_args = mock_urlopen.call_args[0][0]
-        assert call_args.full_url == "https://api.edgee.ai/v1/chat/completions"
+        assert call_args.full_url == "https://edgee.io/v1/chat/completions"
         body = json.loads(call_args.data.decode("utf-8"))
         assert body["model"] == "gpt-4"
         assert body["messages"] == [{"role": "user", "content": "Hello"}]

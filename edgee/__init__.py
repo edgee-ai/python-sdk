@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 # API Configuration
-DEFAULT_BASE_URL = "https://api.edgee.ai"
+DEFAULT_BASE_URL = "https://edgee.io"
 API_ENDPOINT = "/v1/chat/completions"
 
 
