@@ -3,6 +3,7 @@
 import json
 import os
 import ssl
+import warnings
 from dataclasses import dataclass
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -10,6 +11,22 @@ from urllib.request import Request, urlopen
 # API Configuration
 DEFAULT_BASE_URL = "https://edgee.io"
 API_ENDPOINT = "/v1/chat/completions"
+
+# Per-request compression toggles, keyed by their InputObject field name.
+COMPRESSION_HEADERS = {
+    "tool_result_trimming": "X-Edgee-Compression-Tool-Result-Trimming",
+    "tool_surface_reduction": "X-Edgee-Compression-Tool-Surface-Reduction",
+    "output_brevity": "X-Edgee-Compression-Brevity",
+}
+
+
+def _compression_headers(toggles: dict) -> dict[str, str]:
+    """Headers for the toggles the caller set. Only real bools count; None means keep the key setting."""
+    return {
+        COMPRESSION_HEADERS[field]: "true" if value else "false"
+        for field, value in toggles.items()
+        if isinstance(value, bool)
+    }
 
 
 def _ssl_context() -> ssl.SSLContext:
@@ -59,9 +76,12 @@ class InputObject:
     tools: list[dict] | None = None
     tool_choice: str | dict | None = None
     tags: list[str] | None = None
-    compression_model: str | None = (
-        None  # Compression model: claude, opencode, cursor, customer (gateway-internal)
-    )
+    # Deprecated: any value turns tool-result trimming on. Use tool_result_trimming instead.
+    compression_model: str | None = None
+    # Per-request overrides of the API key settings. None keeps the key setting.
+    tool_result_trimming: bool | None = None
+    tool_surface_reduction: bool | None = None
+    output_brevity: bool | None = None
 
 
 @dataclass
@@ -216,18 +236,21 @@ class Edgee:
             tool_choice = None
             tags = None
             compression_model = None
+            toggles = {}
         elif isinstance(input, InputObject):
             messages = input.messages
             tools = input.tools
             tool_choice = input.tool_choice
             tags = input.tags
             compression_model = input.compression_model
+            toggles = {field: getattr(input, field) for field in COMPRESSION_HEADERS}
         else:
             messages = input.get("messages", [])
             tools = input.get("tools")
             tool_choice = input.get("tool_choice")
             tags = input.get("tags")
             compression_model = input.get("compression_model")
+            toggles = {field: input.get(field) for field in COMPRESSION_HEADERS}
 
         body: dict = {"model": model, "messages": messages}
         if stream:
@@ -239,6 +262,11 @@ class Edgee:
         if tags:
             body["tags"] = tags
         if compression_model is not None:
+            warnings.warn(
+                "compression_model is deprecated; use tool_result_trimming=True instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             body["compression_model"] = compression_model
 
         request = Request(
@@ -247,6 +275,7 @@ class Edgee:
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
+                **_compression_headers(toggles),
             },
             method="POST",
         )

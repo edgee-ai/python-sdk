@@ -355,3 +355,123 @@ class TestEdgeeSend:
         result = client.send(model="gpt-4", input="Test")
 
         assert result.compression is None
+
+
+class TestCompressionOverrides:
+    """Per-request compression toggles are sent as headers, never in the body"""
+
+    TRIM = "X-Edgee-Compression-Tool-Result-Trimming"
+    SURFACE = "X-Edgee-Compression-Tool-Surface-Reduction"
+    BREVITY = "X-Edgee-Compression-Brevity"
+
+    def _mock_response(self, data: dict):
+        mock = MagicMock()
+        mock.read.return_value = json.dumps(data).encode("utf-8")
+        mock.__enter__ = MagicMock(return_value=mock)
+        mock.__exit__ = MagicMock(return_value=False)
+        return mock
+
+    def _ok(self):
+        return self._mock_response(
+            {
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "ok"},
+                        "finish_reason": "stop",
+                    }
+                ]
+            }
+        )
+
+    def _sent(self, mock_urlopen):
+        request = mock_urlopen.call_args[0][0]
+        return request, json.loads(request.data.decode("utf-8"))
+
+    @patch("edgee.urlopen")
+    def test_input_object_toggles_become_headers(self, mock_urlopen):
+        from edgee import InputObject
+
+        mock_urlopen.return_value = self._ok()
+        Edgee("test-api-key").send(
+            model="gpt-4",
+            input=InputObject(
+                messages=[{"role": "user", "content": "Hello"}],
+                tool_result_trimming=True,
+                tool_surface_reduction=False,
+                output_brevity=True,
+            ),
+        )
+
+        request, body = self._sent(mock_urlopen)
+        # urllib normalizes header names with str.capitalize().
+        assert request.get_header(self.TRIM.capitalize()) == "true"
+        assert request.get_header(self.SURFACE.capitalize()) == "false"
+        assert request.get_header(self.BREVITY.capitalize()) == "true"
+        for field in ("tool_result_trimming", "tool_surface_reduction", "output_brevity"):
+            assert field not in body
+
+    @patch("edgee.urlopen")
+    def test_dict_toggles_and_unset_fields(self, mock_urlopen):
+        mock_urlopen.return_value = self._ok()
+        Edgee("test-api-key").send(
+            model="gpt-4",
+            input={
+                "messages": [{"role": "user", "content": "Hello"}],
+                "tool_result_trimming": False,
+                # Not a bool: ignored, so the key setting applies.
+                "output_brevity": "yes",
+            },
+        )
+
+        request, _ = self._sent(mock_urlopen)
+        assert request.get_header(self.TRIM.capitalize()) == "false"
+        assert not request.has_header(self.SURFACE.capitalize())
+        assert not request.has_header(self.BREVITY.capitalize())
+
+    @patch("edgee.urlopen")
+    def test_string_input_sends_no_compression_headers(self, mock_urlopen):
+        mock_urlopen.return_value = self._ok()
+        Edgee("test-api-key").send(model="gpt-4", input="Hello")
+
+        request, _ = self._sent(mock_urlopen)
+        assert not any(name.startswith("X-edgee-compression") for name in request.headers)
+
+    @patch("edgee.urlopen")
+    def test_streaming_request_sends_toggles(self, mock_urlopen):
+        stream = MagicMock()
+        stream.__iter__ = MagicMock(return_value=iter([b"data: [DONE]\n"]))
+        stream.__enter__ = MagicMock(return_value=stream)
+        stream.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = stream
+
+        chunks = list(
+            Edgee("test-api-key").send(
+                model="gpt-4",
+                input={
+                    "messages": [{"role": "user", "content": "Hello"}],
+                    "tool_surface_reduction": True,
+                },
+                stream=True,
+            )
+        )
+
+        assert chunks == []
+        request, _ = self._sent(mock_urlopen)
+        assert request.get_header(self.SURFACE.capitalize()) == "true"
+        assert not request.has_header(self.TRIM.capitalize())
+
+    @patch("edgee.urlopen")
+    def test_compression_model_is_deprecated_but_still_sent(self, mock_urlopen):
+        mock_urlopen.return_value = self._ok()
+        with pytest.warns(DeprecationWarning, match="tool_result_trimming"):
+            Edgee("test-api-key").send(
+                model="gpt-4",
+                input={
+                    "messages": [{"role": "user", "content": "Hello"}],
+                    "compression_model": "claude",
+                },
+            )
+
+        _, body = self._sent(mock_urlopen)
+        assert body["compression_model"] == "claude"
