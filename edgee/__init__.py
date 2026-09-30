@@ -3,7 +3,6 @@
 import json
 import os
 import ssl
-import warnings
 from dataclasses import dataclass
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -76,8 +75,6 @@ class InputObject:
     tools: list[dict] | None = None
     tool_choice: str | dict | None = None
     tags: list[str] | None = None
-    # Deprecated: any value turns tool-result trimming on. Use tool_result_trimming instead.
-    compression_model: str | None = None
     # Per-request overrides of the API key settings. None keeps the key setting.
     tool_result_trimming: bool | None = None
     tool_surface_reduction: bool | None = None
@@ -235,21 +232,18 @@ class Edgee:
             tools = None
             tool_choice = None
             tags = None
-            compression_model = None
             toggles = {}
         elif isinstance(input, InputObject):
             messages = input.messages
             tools = input.tools
             tool_choice = input.tool_choice
             tags = input.tags
-            compression_model = input.compression_model
             toggles = {field: getattr(input, field) for field in COMPRESSION_HEADERS}
         else:
             messages = input.get("messages", [])
             tools = input.get("tools")
             tool_choice = input.get("tool_choice")
             tags = input.get("tags")
-            compression_model = input.get("compression_model")
             toggles = {field: input.get(field) for field in COMPRESSION_HEADERS}
 
         body: dict = {"model": model, "messages": messages}
@@ -261,13 +255,6 @@ class Edgee:
             body["tool_choice"] = tool_choice
         if tags:
             body["tags"] = tags
-        if compression_model is not None:
-            warnings.warn(
-                "compression_model is deprecated; use tool_result_trimming=True instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            body["compression_model"] = compression_model
 
         request = Request(
             f"{self.base_url}{API_ENDPOINT}",
