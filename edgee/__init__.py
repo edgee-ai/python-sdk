@@ -6,6 +6,7 @@ import ssl
 import warnings
 from dataclasses import dataclass
 from urllib.error import HTTPError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 # API Configuration
@@ -211,6 +212,9 @@ class Edgee:
             raise ValueError("EDGEE_API_KEY is not set")
 
         self.base_url = base_url or os.environ.get("EDGEE_BASE_URL", DEFAULT_BASE_URL)
+        # urlopen also accepts file:// and custom schemes; only allow HTTP(S).
+        if urlparse(self.base_url).scheme not in ("http", "https"):
+            raise ValueError("base_url must use http or https")
 
     def send(
         self,
