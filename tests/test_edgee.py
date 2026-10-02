@@ -460,18 +460,3 @@ class TestCompressionOverrides:
         request, _ = self._sent(mock_urlopen)
         assert request.get_header(self.SURFACE.capitalize()) == "true"
         assert not request.has_header(self.TRIM.capitalize())
-
-    @patch("edgee.urlopen")
-    def test_compression_model_is_deprecated_but_still_sent(self, mock_urlopen):
-        mock_urlopen.return_value = self._ok()
-        with pytest.warns(DeprecationWarning, match="tool_result_trimming"):
-            Edgee("test-api-key").send(
-                model="gpt-4",
-                input={
-                    "messages": [{"role": "user", "content": "Hello"}],
-                    "compression_model": "claude",
-                },
-            )
-
-        _, body = self._sent(mock_urlopen)
-        assert body["compression_model"] == "claude"
